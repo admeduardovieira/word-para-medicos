@@ -9,6 +9,14 @@ import argparse
 from pathlib import Path
 from datetime import datetime
 
+# Forçar UTF-8 no Windows
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8')
+
+# Emojis para status (compatível com UTF-8)
+CHECK = "[OK]" if sys.platform == 'win32' else "✓"
+ERROR = "[ERRO]" if sys.platform == 'win32' else "✗"
+
 # Adicionar ao path
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -56,15 +64,14 @@ def main():
             filepath = str(patients_dir / f"{safe_name.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx")
         
         prontuario.save(filepath)
-        print(f"✓ Prontuário criado: {filepath}")
+        print(f"[{CHECK}] Prontuario criado: {filepath}")
         
         if args.qr:
             token = qr_manager.generate_token(Path(filepath).name, patient_name)
             qr_path = str(Path(filepath).parent / f"qr_{token}.png")
             qr_manager.generate_qr_code(token, qr_path)
-            print(f"✓ QR Code gerado: {qr_path}")
+            print(f"[{CHECK}] QR Code gerado: {qr_path}")
             print(f"  Token: {token}")
-    
     elif args.scan:
         try:
             from pyzbar.pyzbar import decode
@@ -84,28 +91,28 @@ def main():
                         prontuario_path = patients_dir / prontuario_id
                         
                         if prontuario_path.exists():
-                            print(f"✓ Prontuário acessado via QR Code: {prontuario_path}")
+                            print(f"[{CHECK}] Prontuario acessado via QR Code: {prontuario_path}")
                             from docx import Document
                             doc = Document(str(prontuario_path))
                             for p in doc.paragraphs:
                                 if p.text:
                                     print(f"  {p.text}")
                         else:
-                            print(f"✗ Prontuário não encontrado: {prontuario_id}")
+                            print(f"[{ERROR}] Prontuario nao encontrado: {prontuario_id}")
                     else:
-                        print("✗ Token inválido ou expirado")
+                        print(f"[{ERROR}] Token invalido ou expirado")
                 else:
                     print(f"Dados do QR: {data}")
             else:
-                print("✗ Nenhum código QR encontrado")
+                print(f"[{ERROR}] Nenhum codigo QR encontrado")
                 
         except ImportError:
-            print("✗ Bibliotecas de leitura de QR não instaladas (pyzbar)")
+            print(f"[{ERROR}] Bibliotecas de leitura de QR nao instaladas (pyzbar)")
         except Exception as e:
-            print(f"✗ Erro: {e}")
+            print(f"[{ERROR}] Erro: {e}")
     
     print("\nUso:")
-    print("  python3 cli.py --new --patient \"João Silva\" --qr")
+    print("  python3 cli.py --new --patient \"Joao Silva\" --qr")
     print("  python3 cli.py --scan qr_code.png")
 
 
