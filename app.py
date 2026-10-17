@@ -215,9 +215,9 @@ EVOLUÇÃO
             messagebox.showinfo("Aberto", f"Prontuário aberto: {filepath}")
     
     def generate_qr(self):
-        """Gera QR Code para compartilhamento"""
+        """Gera QR Code e abre visualização para compartilhamento imediato"""
         if not self.current_file:
-            messagebox.showwarning("Aviso", "Salve o prontuário primeiro!")
+            messagebox.showwarning("Aviso", "Salve o prontuario primeiro!")
             return
         
         # Criar token
@@ -228,27 +228,59 @@ EVOLUÇÃO
         qr_path = self.patients_dir / f"qr_{token}.png"
         self.qr_manager.generate_qr_code(token, str(qr_path))
         
-        messagebox.showinfo("QR Code", f"QR Code gerado para compartilhamento!\n\nToken: {token}\nArquivo: {qr_path}")
+        # Mostrar janela de visualização IMEDIATAMENTE
+        self.show_qr_window(token, str(qr_path), prontuario_id)
+    
+    def show_qr_window(self, token, qr_path, prontuario_id):
+        """Mostra janela com QR Code para compartilhamento imediato"""
+        qr_window = tk.Toplevel(self.root)
+        qr_window.title("QR Code - Compartilhamento Seguro")
+        qr_window.geometry("350x400")
+        qr_window.transient(self.root)
+        qr_window.grab_set()  # Janela modal
         
-        # Mostrar imagem do QR (se possível)
+        # Centralizar na tela
+        qr_window.update_idletasks()
+        x = (qr_window.winfo_screenwidth() // 2) - (350 // 2)
+        y = (qr_window.winfo_screenheight() // 2) - (400 // 2)
+        qr_window.geometry(f"350x400+{x}+{y}")
+        
+        # Título
+        tk.Label(qr_window, text="Compartilhar Prontuario via QR Code", 
+                font=("Arial", 14, "bold")).pack(pady=10)
+        
+        # Informações
+        tk.Label(qr_window, text=f"Prontuario: {prontuario_id}", 
+                font=("Arial", 9)).pack(pady=2)
+        tk.Label(qr_window, text=f"Paciente: {self.paciente_var.get()}", 
+                font=("Arial", 9)).pack(pady=2)
+        
+        # Mostrar imagem do QR Code
         try:
             from PIL import Image, ImageTk
-            img = Image.open(str(qr_path))
-            img = img.resize((200, 200))
+            img = Image.open(qr_path)
+            img = img.resize((250, 250))
             img_tk = ImageTk.PhotoImage(img)
-            
-            # Criar janela para mostrar QR
-            qr_window = tk.Toplevel(self.root)
-            qr_window.title("QR Code de Compartilhamento")
-            qr_window.geometry("250x280")
             
             qr_label = tk.Label(qr_window, image=img_tk)
             qr_label.image = img_tk
             qr_label.pack(pady=10)
-            
-            tk.Label(qr_window, text=f"Token: {token}", font=('Arial', 8)).pack()
         except ImportError:
-            print("PIL não disponível para visualização de QR Code")
+            tk.Label(qr_window, text="QR Code salvo em:\n" + qr_path, 
+                    font=("Arial", 9)).pack(pady=10)
+        
+        # Token
+        tk.Label(qr_window, text=f"Token: {token}", 
+                font=("Arial", 8)).pack(pady=2)
+        
+        # Instrucoes
+        tk.Label(qr_window, text="1. Tire um print desta tela\n"
+                                "2. Compartilhe com o paciente\n"
+                                "3. O prontuario expira em 24h", 
+                font=("Arial", 8), fg="gray").pack(pady=10)
+        
+        # Botao de fechar
+        ttk.Button(qr_window, text="Fechar", command=qr_window.destroy).pack(pady=5)
     
     def scan_qr(self):
         """Lê um QR Code"""
