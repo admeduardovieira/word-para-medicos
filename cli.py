@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 CLI para Word para Médicos - versão alternativa quando tkinter não disponível
+Beta 2026-10-19
 """
 
 import os
@@ -11,109 +12,70 @@ from datetime import datetime
 
 # Forçar UTF-8 no Windows
 if sys.platform == 'win32':
-    sys.stdout.reconfigure(encoding='utf-8')
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except AttributeError:
+        pass
 
-# Emojis para status (compatível com UTF-8)
-CHECK = "[OK]" if sys.platform == 'win32' else "✓"
-ERROR = "[ERRO]" if sys.platform == 'win32' else "✗"
+# Caracteres ASCII-compatíveis para Windows
+CHECK = "[OK]"
+ERROR = "[ERRO]"
+INFO = "[INFO]"
 
 # Adicionar ao path
 sys.path.insert(0, str(Path(__file__).parent))
 
+from core.paths import DATA_DIR
 from core.prontuario import ProntuarioMedico
 from core.qr_handler import QRTokenManager
 
+PATIENTS_DIR = DATA_DIR / "patients"
+PATIENTS_DIR.mkdir(parents=True, exist_ok=True)
+
 
 def main():
-    parser = argparse.ArgumentParser(description="Word para Médicos - CLI")
-    parser.add_argument('--new', action='store_true', help='Criar novo prontuório')
-    parser.add_argument('--patient', '-p', help='Nome do paciente')
-    parser.add_argument('--doctor', '-d', default='Dr. Eduardo Vieira', help='Nome do médico')
-    parser.add_argument('--output', '-o', help='Arquivo de saída (.docx)')
-    parser.add_argument('--qr', action='store_true', help='Gerar QR code para compartilhamento')
+    parser = argparse.ArgumentParser(description="Word para Medicos - CLI")
+    parser.add_argument('--new', action='store_true', help='Criar novo prontuario')
+    parser.add_argument('--patient', '-p', help='Nome do paciente (dados ficticios)')
+    parser.add_argument('--doctor', '-d', default='Dr. Eduardo Vieira', help='Nome do medico')
+    parser.add_argument('--output', '-o', help='Arquivo de saida (.docx)')
+    parser.add_argument('--qr', action='store_true', help='Gerar QR code temporario (LAN)')
     parser.add_argument('--scan', help='Ler QR code de arquivo')
     
     args = parser.parse_args()
     
-    app_dir = Path(__file__).parent
-    data_dir = app_dir / "data"
-    patients_dir = data_dir / "patients"
-    patients_dir.mkdir(parents=True, exist_ok=True)
-    
+    data_dir = DATA_DIR
     qr_manager = QRTokenManager(str(data_dir))
     
-    if args.new or not any([args.new, args.scan]):
-        patient_name = args.patient or "Paciente Sem Nome"
+    if args.new or not any([args.scan]):
+        patient_name = args.patient or "[Paciente Ficticio]"
         now = datetime.now().strftime("%d/%m/%Y %H:%M")
         
         prontuario = ProntuarioMedico()
         prontuario.add_header(patient_name, now, args.doctor)
-        prontuario.add_anamnese(
-            "[Queixa principal]",
-            "[Histórico clínico]",
-            "[Exame físico]"
-        )
-        prontuario.add_diagnostico("[Diagnóstico]")
-        prontuario.add_prescricao("[Prescrição]")
-        prontuario.add_evolucao("[Evolução]")
+        prontuario.add_anamnese("[Queixa principal]", "[Historico clinico]", "[Exame fisico]")
+        prontuario.add_diagnostico("[Diagnostico]")
+        prontuario.add_prescricao("[Prescricao]")
+        prontuario.add_evolucao("[Evolucao]")
         
         if args.output:
             filepath = args.output
         else:
             safe_name = "".join(c for c in patient_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
-            filepath = str(patients_dir / f"{safe_name.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx")
+            filepath = str(PATIENTS_DIR / f"{safe_name.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx")
         
         prontuario.save(filepath)
         print(f"[{CHECK}] Prontuario criado: {filepath}")
         
         if args.qr:
-            token = qr_manager.generate_token(Path(filepath).name, patient_name)
-            qr_path = str(Path(filepath).parent / f"qr_{token}.png")
-            qr_manager.generate_qr_code(token, qr_path)
-            print(f"[{CHECK}] QR Code gerado: {qr_path}")
-            print(f"  Token: {token}")
+            print(f"\n[{INFO}] Compartilhamento via QR requer a interface grafica (app.py)")
+            print(f"  Abra app.py para compartilhar via rede local com QR Code")
     elif args.scan:
-        try:
-            from pyzbar.pyzbar import decode
-            from PIL import Image
-            
-            img = Image.open(args.scan)
-            decoded = decode(img)
-            
-            if decoded:
-                data = decoded[0].data.decode('utf-8')
-                if data.startswith("wpm:"):
-                    token = data[3:]
-                    token_data = qr_manager.validate_token(token)
-                    
-                    if token_data:
-                        prontuario_id = token_data["prontuario_id"]
-                        prontuario_path = patients_dir / prontuario_id
-                        
-                        if prontuario_path.exists():
-                            print(f"[{CHECK}] Prontuario acessado via QR Code: {prontuario_path}")
-                            from docx import Document
-                            doc = Document(str(prontuario_path))
-                            for p in doc.paragraphs:
-                                if p.text:
-                                    print(f"  {p.text}")
-                        else:
-                            print(f"[{ERROR}] Prontuario nao encontrado: {prontuario_id}")
-                    else:
-                        print(f"[{ERROR}] Token invalido ou expirado")
-                else:
-                    print(f"Dados do QR: {data}")
-            else:
-                print(f"[{ERROR}] Nenhum codigo QR encontrado")
-                
-        except ImportError:
-            print(f"[{ERROR}] Bibliotecas de leitura de QR nao instaladas (pyzbar)")
-        except Exception as e:
-            print(f"[{ERROR}] Erro: {e}")
-    
-    print("\nUso:")
-    print("  python3 cli.py --new --patient \"Joao Silva\" --qr")
-    print("  python3 cli.py --scan qr_code.png")
+        print(f"[{INFO}] Leitura de QR requer pyzbar. Use a interface grafica.")
+    else:
+        print(" uso:")
+        print("  python3 cli.py --new --patient \"Nome do Paciente\"")
+        print("  python3 cli.py --scan qr_code.png")
 
 
 if __name__ == "__main__":

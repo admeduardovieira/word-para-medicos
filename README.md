@@ -1,45 +1,36 @@
 # Word para Médicos
 
+## BETA 2026-10-19 - RESTRICCOES CONHECIDAS
+- USAR APENAS DADOS FICTICIOS - NENHUM DADO REAL DE PACIENTE
+- Compartilhamento funciona apenas na MESMA rede WiFi
+- NAO oferece HTTPS - HTTP local sem criptografia
+- QR Code contem URL HTTP, nao eh SMART Health Link
+- App esta em fase de demonstracao/teste
+
 ## Visão Geral
-Aplicação leve para geração de prontuários médicos em formato DOCX (Microsoft Word), com compartilhamento seguro via QR Code.
+Aplicação leve para geração de prontuarios medicos em formato DOCX, com compartilhamento via rede local QR Code.
 
 ## Funcionalidades
-- 📄 Criação de prontuários médicos em formato Word (.docx)
-- 💾 Salvar e abrir prontuários de pacientes
-- 📱 Compartilhamento seguro via QR Code (token encriptado)
-- 🔍 Leitura de QR Codes para acesso a prontuários
-- 📋 Interface com editor de texto e painel lateral
-- 💼 Executável portátil para Windows/macOS/Linux
+- Criacao de prontuarios medicos em formato Word (.docx)
+- Salvar e abrir prontuarios de pacientes
+- Compartilhamento via QR Code na rede local (HTTP temporario)
+- Interface com editor de texto e painel lateral
+- Executavel portatil para Windows
 
 ## Requisitos
 - Python 3.8+
-- Dependências: python-docx, qrcode, pyzbar, pillow
+- Dependencias: python-docx, qrcode, pillow, pyzbar
 
-## Instalação
-```bash
-# Instalar dependências
-pip install python-docx qrcode[pil] pyzbar pillow
+## Instalacao
+pip install python-docx qrcode[pil] pillow pyzbar
 
-# Executar diretamente
-python3 cli.py --new --patient "Nome do Paciente" --qr
-```
+## Uso
 
-## Uso (CLI)
-```bash
-# Criar novo prontuário
-python3 cli.py --new --patient "João Silva" --doctor "Dr. Eduardo" --qr
+### GUI (Windows)
+python3 launcher.py  # ou app.py diretamente
 
-# Ler QR Code
-python3 cli.py --scan qr_code.png
-
-# Abrir prontuário existente
-python3 cli.py --open caminho/para/arquivo.docx
-```
-
-## Uso (GUI - quando tkinter disponível)
-```bash
-python3 app.py
-```
+### CLI (quando tkinter nao disponivel)
+python3 cli.py --new --patient "Nome do Paciente"
 
 ## Arquitetura
 ```
